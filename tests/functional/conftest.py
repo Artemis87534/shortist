@@ -1,8 +1,8 @@
 import pytest_asyncio
-import pytest
 from httpx import AsyncClient
 from src.main import app
 from src.database import Base, async_engine
+
 
 @pytest_asyncio.fixture
 async def client():
