@@ -7,5 +7,5 @@ def test_generate_short_id_length():
 
 def test_generate_short_id_uniqueness():
     """Test that generated IDs are unique"""
-    ids = {generate_short_id() for _ in range(100)}
-    assert len(ids) == 100
+    ids = {generate_short_id() for _ in range(1000)}
+    assert len(ids) == 1000
