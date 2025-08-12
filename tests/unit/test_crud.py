@@ -26,8 +26,11 @@ async def test_increment_click_count(db_session: AsyncSession):
     )
     db_session.add(link)
     await db_session.commit()
+    await db_session.refresh(link)
+
     await crud.increment_click_count(db_session, link)
-    assert link.click_count == 1
+    result = await db_session.get(models.Link, link.id)
+    assert result.click_count == 1
 
 @pytest.mark.asyncio
 async def test_create_link_duplicate_alias(db_session: AsyncSession):
@@ -41,6 +44,7 @@ async def test_create_link_duplicate_alias(db_session: AsyncSession):
     )
     db_session.add(link)
     await db_session.commit()
+
     with pytest.raises(NotUniqueAliasError):
         await crud.create_link(
             db=db_session,
@@ -52,7 +56,11 @@ async def test_create_link_duplicate_alias(db_session: AsyncSession):
 async def test_create_update_delete_link(db_session: AsyncSession):
     link = await crud.create_link(db_session, original_url="https://google.com")
     assert link.id is not None
+
     updated = await crud.update_link(db_session, link, "https://yahoo.com")
     assert updated.original_url == "https://yahoo.com"
+
     await crud.delete_link(db_session, link)
-    assert await crud.get_link_by_short_id(db_session, link.short_id) is None
+
+    found = await crud.get_link_by_short_id(db_session, link.short_id)
+    assert found is None
