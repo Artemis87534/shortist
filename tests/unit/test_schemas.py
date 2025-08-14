@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timedelta, timezone
 from src.links.schemas import LinkCreate
 
-def test_original_url_auto_scheme(future_expire):
+def test_original_url_no_change(future_expire):
     data = LinkCreate(original_url="https://example.com", expire_at=future_expire)
     assert str(data.original_url).startswith("https://")
 

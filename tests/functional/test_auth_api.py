@@ -10,8 +10,7 @@ async def test_register_and_login(client):
         "is_superuser": False,
         "is_verified": False
     })
-    assert resp.status_code in (200, 201), f"register failed: {resp.status_code} {resp.text}"
-
+    assert resp.status_code in (200, 201)
     resp = await client.post("/auth/jwt/login", data={
         "username": "user@example.com",
         "password": "string",
