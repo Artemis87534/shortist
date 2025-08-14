@@ -1,40 +1,46 @@
+import uuid
 import pytest
 
 @pytest.mark.asyncio
 async def test_register_and_login(client):
+    email = f"user-{uuid.uuid4().hex[:8]}@example.com"
     resp = await client.post("/auth/register", json={
         "id": 100,
-        "email": "user@example.com",
+        "email": email,
         "password": "string",
         "is_active": True,
         "is_superuser": False,
         "is_verified": False
     })
     assert resp.status_code in (200, 201)
+
     resp = await client.post("/auth/jwt/login", data={
-        "username": "user@example.com",
+        "username": email,
         "password": "string",
         "grant_type": "password"
     })
-    assert resp.status_code == 200
-    assert "access_token" in resp.json()
+    assert resp.status_code in (200, 204)
+    assert "shortist=" in resp.headers.get("set-cookie", "").lower()
 
 @pytest.mark.asyncio
 async def test_register_duplicate_email(client):
-    await client.post("/auth/register", json={
+    email = f"dup-{uuid.uuid4().hex[:8]}@example.com"
+    first = await client.post("/auth/register", json={
         "id": 200,
-        "email": "dup@example.com",
+        "email": email,
         "password": "string",
         "is_active": True,
         "is_superuser": False,
         "is_verified": False
     })
-    resp = await client.post("/auth/register", json={
+    assert first.status_code in (200, 201)
+
+    second = await client.post("/auth/register", json={
         "id": 201,
-        "email": "dup@example.com",
+        "email": email,
         "password": "string",
         "is_active": True,
         "is_superuser": False,
         "is_verified": False
     })
-    assert resp.status_code >= 400
+    assert second.status_code == 400

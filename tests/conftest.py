@@ -1,42 +1,40 @@
-import os, sys, uuid
-from pathlib import Path
+import os
+import uuid
+import asyncio
 import pytest
-from typing import AsyncGenerator
 from datetime import datetime, timedelta, timezone
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from httpx import AsyncClient
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-os.environ.setdefault("SECRET", "test-secret")
-
-from src.database import Base, get_db
-import src.auth.models as _auth_models  
-import src.links.models as _links_models
+from typing import AsyncGenerator
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.pool import StaticPool
 from src.main import app
+from src.database import Base, get_db
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///file:tests_db?mode=memory&cache=shared&uri=true"
+os.environ.setdefault("SECRET", "testsecret")
 
 @pytest.fixture(scope="session")
-async def engine() -> AsyncGenerator:
-    eng = create_async_engine(TEST_DATABASE_URL, future=True)
-    try:
-        yield eng
-    finally:
-        await eng.dispose()
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
 
-@pytest.fixture(scope="session", autouse=True)
-async def prepare_database(engine) -> AsyncGenerator:
+@pytest.fixture(scope="session")
+async def engine():
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False}
+    )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    try:
+        yield engine
+    finally:
+        await engine.dispose()
 
 @pytest.fixture
-async def async_session_maker(engine) -> async_sessionmaker[AsyncSession]:
-    return async_sessionmaker(engine, expire_on_commit=False)
+async def async_session_maker(engine):
+    return async_sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
 
 @pytest.fixture
 async def db_session(async_session_maker) -> AsyncGenerator[AsyncSession, None]:
@@ -49,9 +47,12 @@ async def client(async_session_maker) -> AsyncGenerator[AsyncClient, None]:
         async with async_session_maker() as session:
             yield session
     app.dependency_overrides[get_db] = override_get_db
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test"
+    ) as ac:
         yield ac
-    app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.clear()
 
 @pytest.fixture
 def future_expire() -> str:
@@ -74,6 +75,7 @@ async def registered_user(client) -> dict:
         "password": "string",
         "grant_type": "password"
     })
-    assert login.status_code == 200
-    token = login.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+    assert login.status_code in (200, 204)
+    set_cookie = login.headers.get("set-cookie", "")
+    assert "shortist=" in set_cookie.lower()
+    return {"email": email}
