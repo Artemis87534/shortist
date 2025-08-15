@@ -10,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 from src.main import app
 from src.database import Base, get_db
 
-os.environ.setdefault("SECRET", "testsecret")
+os.environ.setdefault("SECRET", "test-secret")
 
 @pytest.fixture(scope="session")
 def event_loop():
