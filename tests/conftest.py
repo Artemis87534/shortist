@@ -8,7 +8,6 @@ from typing import AsyncGenerator
 from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import StaticPool
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -31,10 +30,7 @@ def event_loop():
 
 @pytest.fixture(scope="session")
 async def engine():
-    engine = create_async_engine(
-        TEST_DB_URL,
-        future=True,
-    )
+    engine = create_async_engine(TEST_DB_URL, future=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     try:
@@ -77,10 +73,16 @@ async def registered_user(client) -> dict:
         "is_verified": False
     })
     assert resp.status_code in (200, 201)
+
     login = await client.post("/auth/jwt/login", data={
         "username": email,
         "password": "string",
         "grant_type": "password"
     })
     assert login.status_code in (200, 204)
+
+    cookie = login.headers.get("set-cookie")
+    if cookie:
+        client.headers.update({"cookie": cookie})
+
     return {"email": email}
