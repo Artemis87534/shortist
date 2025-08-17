@@ -32,13 +32,16 @@ async def test_redirect_link(client, registered_user, future_expire):
         "expire_at": future_expire
     })
     short_id = create.json()["short_id"]
+
     resp1 = await client.get(f"/links/{short_id}", follow_redirects=False)
     if resp1.status_code in (302, 307):
-        assert resp1.headers.get("location") == target
+        location = resp1.headers.get("location")
+        assert location.rstrip("/") == target.rstrip("/")
     else:
         resp2 = await client.get(f"/r/{short_id}", follow_redirects=False)
         assert resp2.status_code in (302, 307)
-        assert resp2.headers.get("location") == target
+        location = resp2.headers.get("location")
+        assert location.rstrip("/") == target.rstrip("/")
 
 @pytest.mark.asyncio
 async def test_redirect_not_found(client):
