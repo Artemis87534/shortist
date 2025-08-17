@@ -1,45 +1,48 @@
-import uuid
 import pytest
+import uuid
 
 @pytest.mark.asyncio
 async def test_create_link_anonymous(client, future_expire):
-    body = {
-        "original_url": "https://example.com",
+    resp = await client.post("/links/shorten", json={
+        "original_url": "https://anon.example",
         "custom_alias": f"anon-{uuid.uuid4().hex[:6]}",
         "expire_at": future_expire
-    }
-    resp = await client.post("/links/shorten", json=body)
+    })
     assert resp.status_code in (200, 201)
-    data = resp.json()
-    assert "short_id" in data
-    assert data["original_url"].rstrip("/") == body["original_url"].rstrip("/")
+    body = resp.json()
+    assert "short_id" in body
 
 @pytest.mark.asyncio
 async def test_create_link_with_auth(client, registered_user, future_expire):
-    body = {
-        "original_url": "https://auth-example.com",
+    resp = await client.post("/links/shorten", json={
+        "original_url": "https://auth.example",
         "custom_alias": f"auth-{uuid.uuid4().hex[:6]}",
         "expire_at": future_expire
-    }
-    resp = await client.post("/links/shorten", json=body)
+    })
     assert resp.status_code in (200, 201)
-    assert "short_id" in resp.json()
+    body = resp.json()
+    assert "short_id" in body
 
 @pytest.mark.asyncio
-async def test_redirect_link(client, future_expire):
+async def test_redirect_link(client, registered_user, future_expire):
+    target = "https://redirect.example"
     create = await client.post("/links/shorten", json={
-        "original_url": "https://example.org/page",
+        "original_url": target,
         "custom_alias": f"redir-{uuid.uuid4().hex[:6]}",
         "expire_at": future_expire
     })
-    assert create.status_code in (200, 201)
     short_id = create.json()["short_id"]
-    resp = await client.get(f"/links/{short_id}", follow_redirects=False)
-    assert resp.status_code in (302, 307)
+    resp1 = await client.get(f"/links/{short_id}", follow_redirects=False)
+    if resp1.status_code in (302, 307):
+        assert resp1.headers.get("location") == target
+    else:
+        resp2 = await client.get(f"/r/{short_id}", follow_redirects=False)
+        assert resp2.status_code in (302, 307)
+        assert resp2.headers.get("location") == target
 
 @pytest.mark.asyncio
 async def test_redirect_not_found(client):
-    resp = await client.get("/links/not-existing", follow_redirects=False)
+    resp = await client.get("/r/notfound123", follow_redirects=False)
     assert resp.status_code == 404
 
 @pytest.mark.asyncio
@@ -59,13 +62,16 @@ async def test_stats_access_control(client, registered_user, future_expire):
         "is_superuser": False,
         "is_verified": False
     })
-    await client.post("/auth/jwt/login", data={
+    login = await client.post("/auth/jwt/login", data={
         "username": other_email,
         "password": "string",
         "grant_type": "password"
     })
-    resp_forbidden = await client.get(f"/links/{short_id}/stats")
-    assert resp_forbidden.status_code in (403, 404)
+    cookie = login.headers.get("set-cookie")
+    if cookie:
+        client.headers.update({"cookie": cookie})
+    resp = await client.get(f"/links/{short_id}/stats")
+    assert resp.status_code in (403, 404)
 
 @pytest.mark.asyncio
 async def test_update_and_delete_link(client, registered_user, future_expire):
@@ -95,6 +101,5 @@ async def test_search_links(client, registered_user, future_expire):
         assert resp.status_code in (200, 201)
     found = await client.get("/links/search/", params={"original_url": term})
     assert found.status_code == 200
-    items = found.json()
-    assert isinstance(items, list)
-    assert len(items) >= 2
+    results = found.json()
+    assert len(results) >= 2

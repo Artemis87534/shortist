@@ -2,8 +2,8 @@ import os
 import sys
 from pathlib import Path
 import uuid
-import asyncio
 import pytest
+import warnings
 from typing import AsyncGenerator
 from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient, ASGITransport
@@ -15,18 +15,15 @@ if str(ROOT) not in sys.path:
 
 os.environ.setdefault("SECRET", "test-secret")
 
+from pydantic.warnings import PydanticDeprecatedSince20
+warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
+
 from src.database import Base, get_db
 import src.auth.models as _auth_models
 import src.links.models as _links_models
 from src.main import app
 
 TEST_DB_URL = "sqlite+aiosqlite:///file:tests_db?mode=memory&cache=shared&uri=true"
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 @pytest.fixture(scope="session")
 async def engine():
@@ -73,16 +70,13 @@ async def registered_user(client) -> dict:
         "is_verified": False
     })
     assert resp.status_code in (200, 201)
-
     login = await client.post("/auth/jwt/login", data={
         "username": email,
         "password": "string",
         "grant_type": "password"
     })
     assert login.status_code in (200, 204)
-
     cookie = login.headers.get("set-cookie")
     if cookie:
         client.headers.update({"cookie": cookie})
-
     return {"email": email}
