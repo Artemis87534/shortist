@@ -10,6 +10,7 @@ class WebsiteUser(HttpUser):
         self.password = "string"
 
         self.client.post("/auth/register", json={
+            "id": 0,
             "email": self.email,
             "password": self.password,
             "is_active": True,
@@ -26,6 +27,16 @@ class WebsiteUser(HttpUser):
         if cookie:
             self.client.headers.update({"cookie": cookie})
 
+        resp = self.client.post("/links/shorten", json={
+            "original_url": "https://example.com/start",
+            "custom_alias": f"start-{uuid.uuid4().hex[:6]}",
+            "expire_at": "2025-12-31T23:59:59+00:00"
+        })
+        if resp.status_code in (200, 201):
+            self.short_id = resp.json()["short_id"]
+        else:
+            self.short_id = None
+
     @task
     def create_link(self):
         self.client.post("/links/shorten", json={
@@ -40,4 +51,10 @@ class WebsiteUser(HttpUser):
 
     @task
     def get_stats(self):
-        self.client.get("/links/doesnotexist/stats")
+        if self.short_id:
+            self.client.get(f"/links/{self.short_id}/stats")
+
+    @task
+    def redirect_link(self):
+        if self.short_id:
+            self.client.get(f"/r/{self.short_id}", allow_redirects=False)
