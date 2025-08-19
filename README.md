@@ -113,8 +113,7 @@ pytest tests/
 pytest --cov=src --cov-report=html tests/
 ```
 
-##### Актуальный отчёт о тестировании доступен по ссылке:
-[Посмотреть HTML-отчёт](file:///C:/Users/%D0%90%D1%80%D1%82%D1%91%D0%BC%20%D0%93%D1%83%D0%BC%D0%B5%D0%BD%D1%8E%D0%BA/Documents/GitHub/shortist/htmlcov/index.html)
+##### Актуальный отчёт о тестировании доступен по ссылке: (```file:///C:/Users/%D0%90%D1%80%D1%82%D1%91%D0%BC%20%D0%93%D1%83%D0%BC%D0%B5%D0%BD%D1%8E%D0%BA/Documents/GitHub/shortist/htmlcov/index.html```)
 
 #### Запуск нагрузочных тестов
 
