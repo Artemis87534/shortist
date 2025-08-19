@@ -108,7 +108,7 @@ pip install -r requirements-test.txt
 pytest tests/
 ```
 
-#### Генерация HTML-отчёта (сгенерированный лежит в htmlcov\index.html)
+#### Генерация HTML-отчёта (сгенерированный лежит в htmlcov\index.html, ссылка - file:///C:/Users/%D0%90%D1%80%D1%82%D1%91%D0%BC%20%D0%93%D1%83%D0%BC%D0%B5%D0%BD%D1%8E%D0%BA/Documents/GitHub/shortist/htmlcov/index.html)
 ```bash
 pytest --cov=src --cov-report=html tests/
 ```
