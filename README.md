@@ -92,3 +92,27 @@ GET /links/search/?original_url=http://example.com
 - Выполните миграцию с инициализацией БД по схеме проекта: `docker-compose exec web alembic upgrade head`
 
 Сервис готов к использованию 🎉
+
+## Тесты и покрытие
+
+### Установка зависимостей
+```bash
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+pip install -r requirements-test.txt
+```
+
+#### Запуск функциональных и юнит тестов
+```bash
+pytest tests/
+```
+
+#### Генерация HTML-отчёта (сгенерированный лежит в htmlcov\index.html)
+```bash
+pytest --cov=src --cov-report=html tests/
+```
+
+#### Запуск нагрузочных тестов
+
+##### Не доделаны (не работают)

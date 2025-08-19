@@ -1,4 +1,4 @@
-from locust import HttpUser, task, between
+"""from locust import HttpUser, task, between
 import uuid
 
 
@@ -57,4 +57,6 @@ class WebsiteUser(HttpUser):
     @task
     def redirect_link(self):
         if self.short_id:
-            self.client.get(f"/r/{self.short_id}", allow_redirects=False)
+            self.client.get(f"/r/{self.short_id}", allow_redirects=False)"""
+
+# Нагрузочные тесты не доделаны
